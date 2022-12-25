@@ -158,7 +158,7 @@ class CovidGame:
             while True: # Wait until the file is updated
                 with open(self.command_filepath, 'r') as f:
                     try:
-                        iter = int(sf.readline())
+                        iter = int(f.readline())
                         if iter > self.iter:
                             return f.readline().split(' ')
                         f.close()
