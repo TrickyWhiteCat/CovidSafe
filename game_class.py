@@ -157,10 +157,13 @@ class CovidGame:
         if self.command_filepath:
             while True: # Wait until the file is updated
                 with open(self.command_filepath, 'r') as f:
-                    iter = int(f.readline())
-                    if iter > self.iter:
-                        creturn f.readline().split(' ')
-                    f.close()
+                    try:
+                        iter = int(sf.readline())
+                        if iter > self.iter:
+                            return f.readline().split(' ')
+                        f.close()
+                    except ValueError:
+                        pass
         
         return input("Enter the row and column separated by space: ").split()
                 
