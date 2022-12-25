@@ -21,29 +21,30 @@ class CovidGame:
         self.iter = 0
 
     def creat_board(self):
-        print()
-        print('\t\t======COVIDSafe======')
-        print()
-        print('    ', end = '')
+        #print()
+        #print('\t\t======COVIDSafe======')
+        #print()
+        #print('    ', end = '')
+        """
         for i in range(self.board_size):
             if (i<9):
-                print(str('0')+str(i+1), end = ' ')
+                #print(str('0')+str(i+1), end = ' ')
             else:
-                print(str(i+1), end = ' ')
-        print()
-        print('   ', end = '')
+                #print(str(i+1), end = ' ')
+        #print()
+        #print('   ', end = '')
         for i in range(self.board_size):
-            print('___', end = '')
-        print('_')
+            #print('___', end = '')
+        #print('_')
         for row in range(self.board_size):
             if (row<9):
-                print(str('0'+str(row+1)), end = ' ')
+                #print(str('0'+str(row+1)), end = ' ')
             else:
-                print(str(row+1), end = ' ')
+                #print(str(row+1), end = ' ')
             for col in range(self.board_size):
-                print('|'+ ' '+str(self.virus_values[row][col]),end='')
-            print('|')
-        print()
+                #print('|'+ ' '+str(self.virus_values[row][col]),end='')
+            #print('|')
+        #print()"""
         if self.board_filepath is not None:
             self.to_csv()
 
@@ -133,11 +134,12 @@ class CovidGame:
                 self.virus_values[row][col] = self.values[row][col]
 
     def instruction(self):
-        print('Enter the value to open the cell:')
-        print('Example: 3 4')
-        print('Enter the value and letter \'M\' to mark or unmark the cell as virus:')
-        print('Example: 4 5 M')
-        print()
+        pass
+        #print('Enter the value to open the cell:')
+        #print('Example: 3 4')
+        #print('Enter the value and letter \'M\' to mark or unmark the cell as virus:')
+        #print('Example: 4 5 M')
+        #print()
 
 
     def show_virus(self):
@@ -180,27 +182,27 @@ class CovidGame:
                     val = list(map(int,user_input))
                 except ValueError:
                     self.clear()
-                    print('Wrong input!')
+                    #print('Wrong input!')
                     self.instruction()
                     continue
                 
             elif len(user_input) == 3:
                 if user_input[2] != 'M' and user_input[2] != 'm':
                     self.clear()
-                    print('Wrong input!')
+                    #print('Wrong input!')
                     self.instruction()
                     continue
                 try:
                     val = list(map(int,user_input[:2]))
                 except ValueError:
                     self.clear()
-                    print('Wrong input!')
+                    #print('Wrong input!')
                     self.instruction()
                     continue
 
                 if val[0] < 1 or val[1] < 1 or val[0] > self.board_size or val[1] > self.board_size:
                     self.clear()
-                    print('Wrong input!')
+                    #print('Wrong input!')
                     self.instruction()
                     continue 
                 
@@ -212,12 +214,12 @@ class CovidGame:
                     self.clear()
                     self.marking.remove([row, col])
                     self.virus_values[row][col] = ' '
-                    print('Virus is already set!')
+                    #print('Virus is already set!')
                     continue
 
                 if self.virus_values[row][col] != ' ': # This cell already known
                     self.clear()
-                    print('This cell is already know!')
+                    #print('This cell is already know!')
                     continue
                 
                 if len(self.marking) < self.num_virus:
@@ -227,18 +229,18 @@ class CovidGame:
                     continue
                 else:
                     self.clear()
-                    print('Marking finished!')
+                    #print('Marking finished!')
                     continue
                 
             else: # Wrong input
                 self.clear()
-                print('Wrong input!')
+                #print('Wrong input!')
                 self.instruction()
                 continue
 
             if val[0] < 1 or val[1] < 1 or val[0] > self.board_size or val[1] > self.board_size:
                     self.clear()
-                    print('Wrong input!')
+                    #print('Wrong input!')
                     self.instruction()
                     continue 
                 
@@ -254,7 +256,7 @@ class CovidGame:
                 self.virus_values[row][col] = 'V'
                 self.show_virus()   
                 self.creat_board()
-                print('GAME OVER!!!')
+                #print('GAME OVER!!!')
                 self.over = True
                 continue
             
@@ -269,5 +271,5 @@ class CovidGame:
             if (self.check_over()):
                 self.show_virus()
                 self.creat_board()
-                print('YOU WIN!!!')
+                #print('YOU WIN!!!')
                 self.over = True
