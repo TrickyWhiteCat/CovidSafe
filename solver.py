@@ -78,10 +78,11 @@ class Solver:
                 except ValueError:
                     pass
 
-    def __write_command(self, row, col):
+    def __write_command(self, row, col, mark: bool = False):
+        content = f"{row} {col} M" if mark else f"{row} {col}"
         with open(self.command_path, mode = 'w') as cmd:
             cmd.write(f"{self.__iter}\n")
-            cmd.write(f"{row} {col}")
+            cmd.write(content)
             self.__iter += 1
             cmd.close()
 
