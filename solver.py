@@ -15,27 +15,30 @@ class Solver:
             path_to_command = "command.inp"
         self.command_path = path_to_command
 
-        self.__iter = 1
-        self.solved = False
-        self.__finished = False
-        self.__safe = []
-        self.__border = []
-        self.__undiscovered = []
+        self.__iter = 1 # Used to sync between solver and game board
+        self.solved = False # Whether the problem has been solved
+        self.__finished = False # Finish flag
+        self.__mark =  [] # A list containing positions of cells to be marked as bad cells
+        self.__safe = [] # A list of  positions of cells that can be safely opened
+        self.__border = [] # A list of positions of cells that are in the border. Go to __find_cells_in_border to read more.
+        self.__undiscovered = [] # A list of positions of cells that aren't opened
 
     def __find_cells_in_border(self) -> list:
         """Return a list of positions of cells that are discovered and containing positive numbers whose neighbors aren't fully discovered.
+        
         Example:
-        |  |  | 1|
-        |  | 3| V|
-        |  | V| 2|
-        -> Cells containing 3 and 1 are returned
+
+        | _| _| 1|\n
+        | _| 3| V|\n
+        | _| V| 2|\n
+
+        -> A list which consists of cells containing 3 and 1 are returned
         """
+        self.__border = [] # Reset
 
         for row_idx, row in enumerate(self.__board_state):
             for col_idx, cell in enumerate(row):
                 try:
-                    if (row_idx, col_idx) in self.__border:
-                        continue # Skip if existed
                     if int(cell) > 0: # Will throw a ValueError if that cell contains "V" or " " and the condition will be Falsed if the cell's value is 0
                         self.__border.append((row_idx, col_idx))
                 except ValueError:
@@ -49,6 +52,10 @@ class Solver:
         neighbor = {} 
         for neighbor_row in range(row - 1, row + 2): # in [row - 1, row + 1]
             for neighbor_col in range(col - 1, col + 2):
+                if neighbor_col < 0 or neighbor_row < 0:
+                    continue
+                if neighbor_row == row and neighbor_col == col:
+                    continue
                 try: # Avoid index out of range for cells in the border
                     neighbor[(neighbor_row, neighbor_col)] = self.__board_state[neighbor_row][neighbor_col]
                 except IndexError:
@@ -56,6 +63,7 @@ class Solver:
         return neighbor
 
     def __read_board(self):
+        """Read the current board state."""
         path = self.board_path
         while True: # Wait for the file to be updated
             with open(path, mode='r') as board:
@@ -66,6 +74,7 @@ class Solver:
                         board_state = []
 
                         for row_idx, line in enumerate(lines):
+                            line = line.replace("\n", "") # Remove \n characters
                             cells_list = line.split(",")
                             board_state.append(cells_list)
 
@@ -78,21 +87,46 @@ class Solver:
                 except ValueError:
                     pass
 
-    def __write_command(self, row, col, mark: bool = False):
-        content = f"{row} {col} M" if mark else f"{row} {col}"
+    def __write_command(self):
+        (row, col), mark = self.__choose_pos()
+        content = f"{row + 1} {col + 1} M" if mark else f"{row + 1} {col + 1}" # Board are indexed from 1 instead of 0
         with open(self.command_path, mode = 'w') as cmd:
             cmd.write(f"{self.__iter}\n")
             cmd.write(content)
             self.__iter += 1
             cmd.close()
 
+    def __find_bad_cells(self):
+        """Bad cells are cells containing virus. We can find bad cells by examining border cell whose number of undiscovered neighbors equals to its value."""
+        
+        for cell_row, cell_col in self.__border:
+
+            cell_value = int(self.__board_state[cell_row][cell_col])
+
+            neighbors = self.__neighbors(row = cell_row, col = cell_col)
+            undiscovered = []
+            count_undiscovered = 0
+
+            for pos in neighbors:
+
+                value = neighbors[pos]
+                if value == "M":
+                    count_undiscovered += 1
+                    continue
+
+                if value == " ":
+                    count_undiscovered += 1
+                    if pos not in self.__mark:
+                        undiscovered.append(pos)
+            
+            if count_undiscovered == cell_value:
+                self.__mark.extend(undiscovered)
+
+
     def __find_safe_cells(self):
         
-        self.__find_cells_in_border()
-        
-        while self.__border:
+        for cell_row, cell_col in self.__border:
 
-            cell_row, cell_col = self.__border.pop() # Get a cell and remove it from the list
             cell_value = int(self.__board_state[cell_row][cell_col])
             
             neighbors = self.__neighbors(row = cell_row, col = cell_col)
@@ -105,7 +139,7 @@ class Solver:
                     continue
 
                 value = neighbors[pos]
-                if value == "V":
+                if value == "M" or pos in self.__mark:
                     count_bad += 1
                     continue
                 if value == " ":
@@ -116,17 +150,36 @@ class Solver:
 
 
     def __choose_pos(self) -> tuple:
-        if self.__safe:
-            return self.__safe.pop()
+        """Return the position of cell to be chosen and whether we mark it as bad cell or not.
+        Return: ((row, col), mark)"""
+        if self.__mark: # Prioritize marking bad cells
+            pos = self.__mark.pop()
+            self.__undiscovered.remove(pos)
+            return pos, True
 
-        return [val + 1 for val in random.choice(self.__undiscovered)]    
+        if self.__safe:
+            pos = self.__safe.pop()
+            self.__undiscovered.remove(pos)
+            return pos, False
+
+        return random.choice(self.__undiscovered), False
 
     def __check_finished(self):
+        has_V = False
         for row in self.__board_state:
             if "V" in row: # Virus detected
-                self.solved = False
+                has_V = True # Assume that we lost.
                 self.__finished = True
+            if " " in row: # If we won (all cells are opened) then this case will never happen
+                if has_V:
+                    self.solved = False
                 return
+
+            if has_V:
+                self.solved = True
+            
+            self.__finished = False
+            
         
         for row in self.__board_state:
             if " " in row: # There exists unopened cell
@@ -141,14 +194,25 @@ class Solver:
     def solve(self):
         while not self.__finished:
             time.sleep(1)
+
             self.__read_board()
-
-            if not self.__safe: # If there isn't any safe to open cell left, we need to find new one.
-                self.__find_safe_cells()
-
-            row, col = self.__choose_pos()
-            self.__write_command(row = row, col = col)
             self.__check_finished()
+            
+            self.__find_cells_in_border()
+            
+            self.__find_bad_cells()
+
+            while self.__mark:
+                self.__write_command()
+            
+            self.__find_safe_cells()
+
+            if not self.__safe:
+                self.__write_command()
+
+            while self.__safe:
+                self.__write_command()
+
         
         with open("result.txt", 'a') as res_file:
             res_file.write(f"{int(self.solved)}\n")

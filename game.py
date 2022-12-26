@@ -213,7 +213,6 @@ class CovidGame:
                     self.clear()
                     self.marking.remove([row, col])
                     self.virus_values[row][col] = ' '
-                    print('Virus is already set!')
                     continue
 
                 if self.virus_values[row][col] != ' ': # This cell already known
@@ -233,13 +232,16 @@ class CovidGame:
                 
             else: # Wrong input
                 self.clear()
-                print('Wrong input!')
+                print(f'Input are too long!')
                 self.instruction()
                 continue
 
             if val[0] < 1 or val[1] < 1 or val[0] > self.board_size or val[1] > self.board_size:
                     self.clear()
                     print('Wrong input!')
+                    while True:
+                        self.clear()
+                        print(f"{val[0]}, {val[1]} ")
                     self.instruction()
                     continue 
                 
