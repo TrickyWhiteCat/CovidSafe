@@ -9,11 +9,13 @@ def clear(*files):
         with open(filename, 'w') as file:
             file.write("")
 
-def run():
-    clear("board.out", "command.inp")
+def run(index:int = 0):
+    board_path = f"board_{index}.out"
+    cmd_path = f"command_{index}.inp"
+    clear(board_path, cmd_path)
 
-    solver = Solver(path_to_board="board.out", path_to_command="command.inp")
-    game = CovidGame(10, 10, board_filepath='board.out', command_filepath='command.inp')
+    solver = Solver(path_to_board=board_path, path_to_command=cmd_path)
+    game = CovidGame(10, 10, board_filepath=board_path, command_filepath=cmd_path)
 
     play_game = Process(target = game.play)
     solve = Process(target = solver.solve)
@@ -23,10 +25,18 @@ def run():
     while play_game.is_alive() or solve.is_alive():
         pass # Wait for both child process to finish
 
+def work(num_trials, index=0):
+    for trial in range(num_trials):
+        run(index)
+
 
 if __name__ == "__main__":
-    for trial in range(10**5):
-        run()
+    NUM_CORES = 8
+    num_trials = 10**4
+    processes = []
+    for core_idx in range(NUM_CORES):
+        processes.append(Process(target=work, args=[num_trials, core_idx]))
+        processes[-1].start()
 
     # Read all results
     with open("result.txt", 'r') as res_file:
