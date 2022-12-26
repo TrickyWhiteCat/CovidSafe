@@ -31,15 +31,18 @@ def work(num_trials, index=0):
 
 
 if __name__ == "__main__":
-    NUM_CORES = 8
+    NUM_CORES = 1
     num_trials = 10**4
     processes = []
     for core_idx in range(NUM_CORES):
         processes.append(Process(target=work, args=[num_trials, core_idx]))
         processes[-1].start()
 
+    while sum([process.is_alive() for process in processes]):
+        pass
+
     # Read all results
     with open("result.txt", 'r') as res_file:
         list_res = [int(val) for val in res_file.readlines()]
     
-    print(f"Winrate: {sum(list_res/len(list_res))}")
+    print(f"Winrate: {sum(list_res)/len(list_res)}")
