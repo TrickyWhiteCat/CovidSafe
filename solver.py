@@ -65,11 +65,13 @@ class Solver:
     def __read_board(self):
         """Read the current board state."""
         path = self.board_path
+        self.__undiscovered = []
         while True: # Wait for the file to be updated
             with open(path, mode='r') as board:
                 try:
                     iter = int(board.readline())
                     if iter < self.__iter:
+                        self.__iter = iter + 1
                         lines = board.readlines()
                         board_state = []
 
@@ -153,13 +155,11 @@ class Solver:
         """Return the position of cell to be chosen and whether we mark it as bad cell or not.
         Return: ((row, col), mark)"""
         if self.__mark: # Prioritize marking bad cells
-            pos = self.__mark.pop()
-            self.__undiscovered.remove(pos)
+            pos = self.__mark.pop(0)
             return pos, True
 
         if self.__safe:
-            pos = self.__safe.pop()
-            self.__undiscovered.remove(pos)
+            pos = self.__safe.pop(0)
             return pos, False
 
         return random.choice(self.__undiscovered), False
@@ -168,51 +168,43 @@ class Solver:
         has_V = False
         for row in self.__board_state:
             if "V" in row: # Virus detected
-                has_V = True # Assume that we lost.
+                has_V = True
                 self.__finished = True
+
             if " " in row: # If we won (all cells are opened) then this case will never happen
                 if has_V:
                     self.solved = False
-                return
+                    return
 
-            if has_V:
-                self.solved = True
-            
-            self.__finished = False
-            
-        
-        for row in self.__board_state:
-            if " " in row: # There exists unopened cell
-                self.__finished = False
-                return
-
-        # No unopened cell left
-        self.__finished = True
-        self.solved = True
+        if has_V:
+            self.solved = True
 
 
     def solve(self):
-        while not self.__finished:
-            time.sleep(1)
+        self.__iter = 1
+        while True:
+            #time.sleep(1)
 
             self.__read_board()
+            
             self.__check_finished()
             
             self.__find_cells_in_border()
             
             self.__find_bad_cells()
-
-            while self.__mark:
-                self.__write_command()
-            
             self.__find_safe_cells()
 
-            if not self.__safe:
-                self.__write_command()
+            if self.__safe or self.__mark:
+                while self.__mark or self.__safe:
+                    self.__write_command()
+                continue
 
-            while self.__safe:
-                self.__write_command()
+            self.__check_finished()
+            if self.__finished:
+                break
 
+            # A random cell
+            self.__write_command()
         
         with open("result.txt", 'a') as res_file:
             res_file.write(f"{int(self.solved)}\n")

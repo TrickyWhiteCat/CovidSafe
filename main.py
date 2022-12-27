@@ -15,7 +15,7 @@ def run(index:int = 0):
     clear(board_path, cmd_path)
 
     solver = Solver(path_to_board=board_path, path_to_command=cmd_path)
-    game = CovidGame(10, 10, board_filepath=board_path, command_filepath=cmd_path)
+    game = CovidGame(16, 40, board_filepath=board_path, command_filepath=cmd_path)
 
     play_game = Process(target = game.play)
     solve = Process(target = solver.solve)
@@ -31,19 +31,22 @@ def work(num_trials, index=0):
 
 
 if __name__ == "__main__":
-    clear("result.txt")
+
+    res_file = "result.txt"
+    board_out = "board.out"
+    cmd_inp = "cmd.inp"
+    clear(res_file, board_out, cmd_inp)
     NUM_CORES = 1
     num_trials = 10**4
-    processes = []
-    for core_idx in range(NUM_CORES):
-        processes.append(Process(target=work, args=[num_trials, core_idx]))
-        processes[-1].start()
 
-    while sum([process.is_alive() for process in processes]):
+    game = CovidGame(16, 40, board_filepath=board_out, command_filepath=cmd_inp)
+    solver = Solver(path_to_board=board_out, path_to_command=cmd_inp)
+
+    game_process = Process(target=game.play)
+    solver_process = Process(target=solver.solve)
+
+    game_process.start()
+    solver_process.start()
+
+    while game_process.is_alive() or solver_process.is_alive():
         pass
-
-    # Read all results
-    with open("result.txt", 'r') as res_file:
-        list_res = [int(val) for val in res_file.readlines()]
-    
-    print(f"Winrate: {sum(list_res)/len(list_res)}")
