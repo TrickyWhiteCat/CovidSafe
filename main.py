@@ -32,7 +32,7 @@ def work(num_trials, index=0):
 
 if __name__ == "__main__":
     clear("result.txt")
-    NUM_CORES = 8
+    NUM_CORES = 1
     num_trials = 10**4
     processes = []
     for core_idx in range(NUM_CORES):

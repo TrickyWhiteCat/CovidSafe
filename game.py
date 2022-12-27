@@ -44,6 +44,7 @@ class CovidGame:
                 print('|'+ ' '+str(self.virus_values[row][col]),end='')
             print('|')
         print()
+        
         if self.board_filepath is not None:
             self.to_csv()
 
