@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     res_file = "result.txt"
     clear(res_file)
-    NUM_CORES = 4
+    NUM_CORES = 8
     processes = [Process(target = work, args=[10000, core_idx]) for core_idx in range(NUM_CORES)]
     for process in processes:
         process.start()

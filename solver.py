@@ -45,7 +45,7 @@ class Solver:
                     pass  
 
     def __neighbors(self, row: int, col: int) -> dict:
-        """Return neighbors of a cell given its position in the form of a dictionary whose keys = position and values = values of cells"""
+        """Return neighbors of a cell given its position in the form of a dictionary whose keys = positions and values = values of cells"""
         if row >= len(self.__board_state) or col >= len(self.__board_state[0]):
             raise ValueError(f"Position ({row}, {col}) is out of the board.")
         
@@ -56,7 +56,7 @@ class Solver:
                     continue
                 if neighbor_row == row and neighbor_col == col:
                     continue
-                try: # Avoid index out of range for cells in the border
+                try: # Avoid index out of range for cells in the border of the board
                     neighbor[(neighbor_row, neighbor_col)] = self.__board_state[neighbor_row][neighbor_col]
                 except IndexError:
                     pass
