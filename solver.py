@@ -182,7 +182,7 @@ class Solver:
 
     def solve(self):
         self.__iter = 1
-        while True:
+        while not self.__finished:
             #time.sleep(1)
 
             self.__read_board()
@@ -206,5 +206,6 @@ class Solver:
             # A random cell
             self.__write_command()
         
-        with open("result.txt", 'a') as res_file:
-            res_file.write(f"{int(self.solved)}\n")
+        if self.__iter != 2: # Skip lost from the beginning
+            with open("result.txt", 'a') as res_file:
+                res_file.write(f"{int(self.solved)}\n")
