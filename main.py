@@ -33,14 +33,15 @@ def work(num_trials, index=0):
 if __name__ == "__main__":
 
     res_file = "result.txt"
-    clear(res_file)
-    NUM_CORES = 4
-    processes = [Process(target = work, args=[10000, core_idx]) for core_idx in range(NUM_CORES)]
+    #clear(res_file)
+    
+    NUM_CORES = 2
+    processes = [Process(target = work, args=[10**9, core_idx]) for core_idx in range(NUM_CORES)]
     for process in processes:
         process.start()
-
-    while sum([process.is_alive() for process in processes]):
-        pass
+    while True:
+        while sum([process.is_alive() for process in processes]):
+            pass
 
     """
     while True:
@@ -62,4 +63,4 @@ if __name__ == "__main__":
 
         while game_process.is_alive() and solver_process.is_alive():
             pass
-        """
+    """
