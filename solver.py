@@ -89,8 +89,11 @@ class Solver:
                 except ValueError:
                     pass
 
-    def __write_command(self):
-        (row, col), mark = self.__choose_pos()
+    def __write_command(self, row = None, col = None, mark = None):
+
+        if ((row is None) and (col is None) and (mark is None)):
+            (row, col), mark = self.__choose_pos()
+
         content = f"{row + 1} {col + 1} M" if mark else f"{row + 1} {col + 1}" # Board are indexed from 1 instead of 0
         with open(self.command_path, mode = 'w') as cmd:
             cmd.write(f"{self.__iter}\n")
@@ -182,6 +185,10 @@ class Solver:
 
     def solve(self):
         self.__iter = 1
+
+        # First iteration
+        self.__write_command(row=0, col=0, mark=False)
+
         while not self.__finished:
             #time.sleep(1)
 
@@ -206,6 +213,6 @@ class Solver:
             # A random cell
             self.__write_command()
         
-        if self.__iter != 2: # Skip lost from the beginning
-            with open("result.txt", 'a') as res_file:
-                res_file.write(f"{int(self.solved)}\n")
+        #if self.__iter != 2: # Skip lost from the beginning
+        with open("result.txt", 'a') as res_file:
+            res_file.write(f"{int(self.solved)}\n")
