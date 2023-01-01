@@ -36,7 +36,7 @@ if __name__ == "__main__":
     #clear(res_file)
     
     NUM_CORES = 2
-    processes = [Process(target = work, args=[10**9, core_idx]) for core_idx in range(NUM_CORES)]
+    processes = [Process(target = work, args=[500, core_idx]) for core_idx in range(NUM_CORES)]
     for process in processes:
         process.start()
     while True:
