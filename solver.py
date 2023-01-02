@@ -197,9 +197,8 @@ class Solver:
         self.__iter = 1
 
         # First iteration
-        if self.__first_pos is not None: # Otherwise it will randomly choose a cell
+        if isinstance(self.__first_pos, tuple) and (None not in self.__first_pos):
             self.__write_command(row=self.__first_pos[0], col=self.__first_pos[1], mark=False)
-
         while not self.__finished:
             #time.sleep(1)
 
