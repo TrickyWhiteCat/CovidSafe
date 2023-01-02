@@ -34,9 +34,9 @@ if __name__ == "__main__":
 
     NUM_CORES = 2
     
-
+    # Thay đổi cí này là dc
     row = 1
-    col = 1
+    col = 2
 
     res_path = f"result_{row}_{col}.txt"
 
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     for process in processes:
         process.start()
     while sum([process.is_alive() for process in processes]):
-        pas
+        pass
     """
     while True:
 
