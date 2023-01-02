@@ -3,7 +3,7 @@ import time
 
 
 class Solver:
-    def __init__(self, path_to_board: str = None, path_to_command: str = None):
+    def __init__(self, path_to_board: str = None, path_to_command: str = None, **kwargs):
         """
         `path_to_board`: path to the csv file containing data from the board.
         `path_to_command`: path to the csv file containing command (output from the solver)"""
@@ -14,6 +14,16 @@ class Solver:
         if path_to_command is None:
             path_to_command = "command.inp"
         self.command_path = path_to_command
+
+        try:
+            self.result_path = kwargs["result_path"]
+        except KeyError:
+            self.result_path = "result.txt"
+
+        try:
+            self.__first_pos = kwargs["first_pos"]
+        except KeyError:
+            self.__first_pos = None
 
         self.__iter = 1 # Used to sync between solver and game board
         self.solved = False # Whether the problem has been solved
@@ -187,7 +197,8 @@ class Solver:
         self.__iter = 1
 
         # First iteration
-        self.__write_command(row=0, col=0, mark=False)
+        if self.__first_pos is not None: # Otherwise it will randomly choose a cell
+            self.__write_command(row=self.__first_pos[0], col=self.__first_pos[1], mark=False)
 
         while not self.__finished:
             #time.sleep(1)
@@ -204,7 +215,7 @@ class Solver:
             if self.__safe or self.__mark:
                 while self.__mark or self.__safe:
                     self.__write_command()
-                continue
+                continue # Codes below are used to choose a random cell to open, which is redundant if we flagged or opened a cell in current iteration
 
             self.__check_finished()
             if self.__finished:
@@ -214,5 +225,5 @@ class Solver:
             self.__write_command()
         
         #if self.__iter != 2: # Skip lost from the beginning
-        with open("result.txt", 'a') as res_file:
+        with open(self.result_path, 'a') as res_file:
             res_file.write(f"{int(self.solved)}\n")
