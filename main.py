@@ -36,7 +36,7 @@ if __name__ == "__main__":
     
     # Thay đổi cí này là dc
     row = 1
-    col = 2
+    col = 4
 
     res_path = f"result_{row}_{col}.txt"
 

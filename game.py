@@ -241,9 +241,7 @@ class CovidGame:
             if val[0] < 1 or val[1] < 1 or val[0] > self.board_size or val[1] > self.board_size:
                     self.clear()
                     #print('Wrong input!')
-                    self.clear()
                     #print(f"{val[0]}, {val[1]} ")
-                    exit()
                     self.instruction()
                     continue 
                 
