@@ -9,13 +9,13 @@ def clear(*files):
         with open(filename, 'w') as file:
             file.write("")
 
-def run(index:int = 0):
+def run(index:int = 0, first_pos:tuple = None, result_path=None):
     board_path = f"board_{index}.out"
     cmd_path = f"command_{index}.inp"
     clear(board_path, cmd_path)
 
-    solver = Solver(path_to_board=board_path, path_to_command=cmd_path)
-    game = CovidGame(9, 10, board_filepath=board_path, command_filepath=cmd_path)
+    solver = Solver(path_to_board=board_path, path_to_command=cmd_path, first_pos=first_pos, result_path=result_path)
+    game = CovidGame(16, 40, board_filepath=board_path, command_filepath=cmd_path)
 
     play_game = Process(target = game.play)
     solve = Process(target = solver.solve)
@@ -23,26 +23,28 @@ def run(index:int = 0):
     play_game.start()
     solve.start()
     while play_game.is_alive() and solve.is_alive():
-        pass # Wait for both child process to finish
+        pass # Wait for child processes to finish
 
-def work(num_trials, index=0):
+def work(num_trials, index=0, first_pos=None, result_path=None):
     for trial in range(num_trials):
-        run(index)
+        run(index, first_pos, result_path)
 
 
 if __name__ == "__main__":
 
-    res_file = "result.txt"
-    #clear(res_file)
-    
     NUM_CORES = 2
-    processes = [Process(target = work, args=[500, core_idx]) for core_idx in range(NUM_CORES)]
+    
+
+    row = 1
+    col = 1
+
+    res_path = f"result_{row}_{col}.txt"
+
+    processes = [Process(target = work, args=[500, core_idx, (row, col), res_path]) for core_idx in range(NUM_CORES)]
     for process in processes:
         process.start()
-    while True:
-        while sum([process.is_alive() for process in processes]):
-            pass
-
+    while sum([process.is_alive() for process in processes]):
+        pas
     """
     while True:
 
