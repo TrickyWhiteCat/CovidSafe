@@ -208,16 +208,6 @@ class Solver:
         for row, col in self.__border:
             cell_neighbor = self.__neighbors(row, col)
 
-            # Skipping isolated cells (which only contact unrevealed cells)
-            isolated = True
-            for neighbor_row, neighbor_col in cell_neighbor:
-                if self.__board_state[neighbor_row][neighbor_col] != " ":
-                    isolated = False
-                    break
-
-            if isolated:
-                continue
-
             # Making neighbors cells IntVar if they are unrevealed (have values == " ")
             for neighbor_row, neighbor_col in cell_neighbor:
                 if self.__board_state[neighbor_row][neighbor_col] == " ":
