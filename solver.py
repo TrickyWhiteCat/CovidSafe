@@ -7,6 +7,8 @@ import numpy as np
 
 from ortools.sat.python import cp_model
 
+import config
+
 class Solver:
     def __init__(self, path_to_board: str = None, path_to_command: str = None, **kwargs):
         """
@@ -34,13 +36,18 @@ class Solver:
             self.__cp_model = kwargs["cp_model"]
             self.__cp_solver = kwargs["cp_solver"]
         except KeyError:
-            self.__cpmodel = None
-            self.__cpsolver = None
+            self.__cp_model = None
+            self.__cp_solver = None
 
         try: # Set timeout for csp solver
             self.__csp_timeout = kwargs["csp_timeout"]
         except KeyError:
             self.__csp_timeout = 60
+
+        try: # Wait for a few seconds before executing the next iteration
+            self.__wait = kwargs["wait"]
+        except KeyError:
+            self.__wait = None
 
         self.__iter = 0 # Used to sync between solver and game board
         self.solved = False # Whether the problem has been solved
@@ -120,6 +127,9 @@ class Solver:
 
         if ((row is None) and (col is None) and (mark is None)):
             (row, col), mark = self.__choose_pos()
+
+        if self.__wait:
+            time.sleep(self.__wait)
 
         self.__read_board() # Called to wait for sync
 
@@ -315,16 +325,14 @@ class Solver:
             res_file.write(f"{int(self.solved)}\n")
 
 def main():
-    board_path = f"board.out"
-    cmd_path = f"command.inp"
-    result_path = "csp_test.txt"
 
-    solver = Solver(path_to_board=board_path,
-                    path_to_command=cmd_path,
-                    first_pos=None,
-                    result_path=result_path,
+    solver = Solver(path_to_board="board.out",
+                    path_to_command="command.inp",
+                    first_pos=config.first_pos,
+                    result_path=config.result_path,
                     cp_model = cp_model.CpModel(),
-                    cp_solver = cp_model.CpSolver())
+                    cp_solver = cp_model.CpSolver(),
+                    wait=config.wait)
 
     solver.solve()
 
