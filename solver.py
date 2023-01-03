@@ -1,6 +1,11 @@
+import util
+
 import random
 import time
 
+import numpy as np
+
+from ortools.sat.python import cp_model
 
 class Solver:
     def __init__(self, path_to_board: str = None, path_to_command: str = None, **kwargs):
@@ -25,7 +30,19 @@ class Solver:
         except KeyError:
             self.__first_pos = None
 
-        self.__iter = 1 # Used to sync between solver and game board
+        try: # Try to get CSP Model and Solver
+            self.__cp_model = kwargs["cp_model"]
+            self.__cp_solver = kwargs["cp_solver"]
+        except KeyError:
+            self.__cpmodel = None
+            self.__cpsolver = None
+
+        try: # Set timeout for csp solver
+            self.__csp_timeout = kwargs["csp_timeout"]
+        except KeyError:
+            self.__csp_timeout = 60
+
+        self.__iter = 0 # Used to sync between solver and game board
         self.solved = False # Whether the problem has been solved
         self.__finished = False # Finish flag
         self.__mark =  [] # A list containing positions of cells to be marked as bad cells
@@ -42,7 +59,7 @@ class Solver:
         | _| 3| V|\n
         | _| V| 2|\n
 
-        -> A list which consists of cells containing 3 and 1 are returned
+        -> A list which consists of cells containing positions of 3 and 1 are returned
         """
         self.__border = [] # Reset
 
@@ -79,9 +96,8 @@ class Solver:
         while True: # Wait for the file to be updated
             with open(path, mode='r') as board:
                 try:
-                    iter = int(board.readline())
-                    if iter < self.__iter:
-                        self.__iter = iter + 1
+                    iter, self.__num_virus_left = [int(val) for val in board.readline().split()]
+                    if iter == self.__iter:
                         lines = board.readlines()
                         board_state = []
 
@@ -95,6 +111,7 @@ class Solver:
                                     self.__undiscovered.append((row_idx, col_idx))
                                     
                         self.__board_state = board_state
+                        self.__virus_map = (np.array(board_state) == "M").astype(int).tolist() # We want to maintain the consistent use of list but numpy provide a convinient way to get the variable
                         return
                 except ValueError:
                     pass
@@ -104,11 +121,13 @@ class Solver:
         if ((row is None) and (col is None) and (mark is None)):
             (row, col), mark = self.__choose_pos()
 
+        self.__read_board() # Called to wait for sync
+
         content = f"{row + 1} {col + 1} M" if mark else f"{row + 1} {col + 1}" # Board are indexed from 1 instead of 0
         with open(self.command_path, mode = 'w') as cmd:
+            self.__iter += 1
             cmd.write(f"{self.__iter}\n")
             cmd.write(content)
-            self.__iter += 1
             cmd.close()
 
     def __find_bad_cells(self):
@@ -137,7 +156,6 @@ class Solver:
             if count_undiscovered == cell_value:
                 self.__mark.extend(undiscovered)
 
-
     def __find_safe_cells(self):
         
         for cell_row, cell_col in self.__border:
@@ -162,6 +180,33 @@ class Solver:
             
             if count_bad == cell_value: # Our cell has already contact enough bad cells. Other undiscovered cells are safe to open
                 self.__safe.extend(undiscovered)
+
+
+    def __create_csp_variables(self):
+        var = []
+        var_pos = []
+        for row, col in self.__border:
+            cell_neighbor = self.__neighbors(row, col)
+
+            # Making neighbors cells IntVar if they are unrevealed (have values == " ")
+            for neighbor_row, neighbor_col in cell_neighbor:
+                if self.__board_state[neighbor_row][neighbor_col] == " ":
+                    if (neighbor_row, neighbor_col) in var_pos:
+                        continue
+                    var_pos.append((neighbor_row, neighbor_col))
+
+                    int_var = self.__cp_model.NewIntVar(0, 1, name=f"{neighbor_row} {neighbor_col}")
+                    self.__virus_map[neighbor_row][neighbor_col] = int_var
+                    var.append(int_var)
+            
+            # This dict containing pairs of key and value where the key is the position of a cell and the value is whether that cell contains virus
+            neighbor_dict = util.neighbors(board=self.__virus_map, row=row, col=col) 
+            self.__cp_model.Add(sum(neighbor_dict.values()) == int(self.__board_state[row][col]))
+        
+        # Total number of viruses found must be smaller than num_virus_left
+        self.__cp_model.Add(sum(var) <= self.__num_virus_left)
+
+        return var, var_pos
 
 
     def __choose_pos(self) -> tuple:
@@ -192,24 +237,66 @@ class Solver:
         if has_V:
             self.solved = True
 
+    def __solve_as_csp(self):
+        if self.__cp_model is None or self.__cp_solver is None:
+            return
+        print("Trying to use CSP...")
+        var, var_pos = self.__create_csp_variables()
+        res = util.CSPSolution(variables=var)
+        self.__cp_solver.SearchForAllSolutions(self.__cp_model, res)
+        self.__cp_solver.parameters.max_time_in_seconds = self.__csp_timeout
+        if len(res.solution_list) == 0:
+            return
+
+        first_row = res.solution_list[0]
+        for case in res.solution_list:
+            for idx, val in enumerate(first_row):
+                if val != case[idx]: # If a cell contains 2 different values in 2 different cases then we cannot be sure about it
+                    first_row[idx] = -1 # -1 acts as a flag to skip
+        
+        for idx, val in enumerate(first_row):
+            if val == -1:
+                continue
+
+            pos = var_pos[idx]
+            
+            if val == 1: # 1 means that cell contains a virus
+                self.__mark.append(pos)
+
+            if val == 0:
+                self.__safe.append(pos)
+
+        return
+
 
     def solve(self):
-        self.__iter = 1
+        self.__iter = 0
 
         # First iteration
         if isinstance(self.__first_pos, tuple) and (None not in self.__first_pos):
             self.__write_command(row=self.__first_pos[0], col=self.__first_pos[1], mark=False)
+
         while not self.__finished:
-            #time.sleep(1)
+            #time.sleep(0.5)
 
             self.__read_board()
             
             self.__check_finished()
+            if self.__finished:
+                break
             
             self.__find_cells_in_border()
             
             self.__find_bad_cells()
             self.__find_safe_cells()
+            
+            if self.__safe or self.__mark:
+                while self.__mark or self.__safe:
+                    self.__write_command()
+                continue # Codes below are used to choose a random cell to open, which is redundant if we flagged or opened a cell in current iteration
+                
+            if self.__border:
+                self.__solve_as_csp()
 
             if self.__safe or self.__mark:
                 while self.__mark or self.__safe:
@@ -226,3 +313,20 @@ class Solver:
         #if self.__iter != 2: # Skip lost from the beginning
         with open(self.result_path, 'a') as res_file:
             res_file.write(f"{int(self.solved)}\n")
+
+def main():
+    board_path = f"board.out"
+    cmd_path = f"command.inp"
+    result_path = "csp_test.txt"
+
+    solver = Solver(path_to_board=board_path,
+                    path_to_command=cmd_path,
+                    first_pos=None,
+                    result_path=result_path,
+                    cp_model = cp_model.CpModel(),
+                    cp_solver = cp_model.CpSolver())
+
+    solver.solve()
+
+if __name__ == "__main__":
+    main()

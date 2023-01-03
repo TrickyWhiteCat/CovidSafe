@@ -1,8 +1,7 @@
-from multiprocessing import Process
-
 from game import CovidGame
 from solver import Solver
 
+from multiprocessing import Process
 
 def clear(*files):
     for filename in files:
@@ -16,7 +15,7 @@ def run(index:int = 0, num_trials=1000, first_pos=None, result_path=None):
         clear(board_path, cmd_path)
 
         solver = Solver(path_to_board=board_path, path_to_command=cmd_path, first_pos=first_pos, result_path=result_path)
-        game = CovidGame(9, 10, board_filepath=board_path, command_filepath=cmd_path)
+        game = CovidGame(16, 40, board_filepath=board_path, command_filepath=cmd_path)
 
         play_game = Process(target = game.play)
         solve = Process(target = solver.solve)
@@ -28,15 +27,9 @@ def run(index:int = 0, num_trials=1000, first_pos=None, result_path=None):
 
 if __name__ == "__main__":
     
-    NUM_CORES = 2
-
-    for row in range(15, 0, -1):
-        for col in range(15, 0, -1):
-            result_path = f"{row}_{col}.txt"
-
-            processes = [Process(target = run, args=[core_idx, 500, (row, col), result_path]) for core_idx in range(NUM_CORES)]
-            for process in processes:
-                process.start()
-
-            while sum([process.is_alive() for process in processes]):
-                pass
+    result_path = f"csp_test.txt"
+    board_path = f"board.out"
+    cmd_path = f"command.inp"
+    clear(board_path, cmd_path)
+    game = CovidGame(16, 40, board_filepath=board_path, command_filepath=cmd_path)
+    game.play()
