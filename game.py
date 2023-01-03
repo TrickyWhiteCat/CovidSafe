@@ -277,7 +277,7 @@ class CovidGame:
                 self.creat_board()
                 print('YOU WIN!!!')
                 self.over = True
-        input("Press enter to exit.")
+        #input("Press enter to exit.")
 
 def main():
     game = CovidGame(board_size=16,

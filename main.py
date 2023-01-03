@@ -10,13 +10,19 @@ def clear(*files):
             file.write("")
 
 def run_game():
-    subprocess.run(["python", "game.py"], shell=True)
+    subprocess.run(["python", "game.py"])
 
 def run_solver():
-    subprocess.run(["python", "solver.py"], shell=True)
+    subprocess.run(["python", "solver.py"])
 
 if __name__ == "__main__":
     #clear(config.result_path)
-    clear(config.board_path, config.cmd_path)
-    os.system("wt python solver.py")
-    os.system("wt python game.py")
+    while True:
+        clear(config.board_path, config.cmd_path)
+        game_process = Process(target=run_game)
+        solver_process = Process(target=run_solver)
+        game_process.start()
+        solver_process.start()
+
+        while game_process.is_alive() and solver_process.is_alive():
+            pass

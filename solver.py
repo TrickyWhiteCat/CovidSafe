@@ -1,19 +1,21 @@
 import util
+import config
 
 import random
 import time
+import logging
 
 import numpy as np
 
 from ortools.sat.python import cp_model
 
-import config
-
+logging.basicConfig(format=logging.BASIC_FORMAT,
+                    filename="solver.log")
 class Solver:
     def __init__(self, path_to_board: str = None, path_to_command: str = None, **kwargs):
         """
-        `path_to_board`: path to the csv file containing data from the board.
-        `path_to_command`: path to the csv file containing command (output from the solver)"""
+        `path_to_board`: path to the file containing data from the board.
+        `path_to_command`: path to the file containing command (output from the solver)"""
         if path_to_board is None:
             path_to_board = "board.out"
         self.board_path = path_to_board
@@ -22,10 +24,10 @@ class Solver:
             path_to_command = "command.inp"
         self.command_path = path_to_command
 
-        try:
+        try: # The file that the result will be written to. Useful when the game is run more than 1 time
             self.result_path = kwargs["result_path"]
         except KeyError:
-            self.result_path = "result.txt"
+            self.result_path = None
 
         try:
             self.__first_pos = kwargs["first_pos"]
@@ -48,6 +50,14 @@ class Solver:
             self.__wait = kwargs["wait"]
         except KeyError:
             self.__wait = None
+
+        logging.info(f"""Solver object was created with config:
+                            board_path = {self.board_path}
+                            command_path = {self.command_path}
+                            result_path = {self.result_path}
+                            cp_model = {self.__cp_model}
+                            cp_solver = {self.__cp_solver}
+                            timeout = {self.__csp_timeout}""")
 
         self.__iter = 0 # Used to sync between solver and game board
         self.solved = False # Whether the problem has been solved
@@ -198,6 +208,16 @@ class Solver:
         for row, col in self.__border:
             cell_neighbor = self.__neighbors(row, col)
 
+            # Skipping isolated cells (which only contact unrevealed cells)
+            isolated = True
+            for neighbor_row, neighbor_col in cell_neighbor:
+                if self.__board_state[neighbor_row][neighbor_col] != " ":
+                    isolated = False
+                    break
+
+            if isolated:
+                continue
+
             # Making neighbors cells IntVar if they are unrevealed (have values == " ")
             for neighbor_row, neighbor_col in cell_neighbor:
                 if self.__board_state[neighbor_row][neighbor_col] == " ":
@@ -250,11 +270,16 @@ class Solver:
     def __solve_as_csp(self):
         if self.__cp_model is None or self.__cp_solver is None:
             return
-        print("Trying to use CSP...")
+        
+        timeout = self.__csp_timeout
+        if timeout:
+            self.__cp_solver.parameters.max_time_in_seconds = self.__csp_timeout
+            print(f"Trying to use CSP (timeout duration: {timeout}s)...")
+        else:
+            print(f"Trying to use CSP")
         var, var_pos = self.__create_csp_variables()
         res = util.CSPSolution(variables=var)
         self.__cp_solver.SearchForAllSolutions(self.__cp_model, res)
-        self.__cp_solver.parameters.max_time_in_seconds = self.__csp_timeout
         if len(res.solution_list) == 0:
             return
 
@@ -287,7 +312,6 @@ class Solver:
             self.__write_command(row=self.__first_pos[0], col=self.__first_pos[1], mark=False)
 
         while not self.__finished:
-            #time.sleep(0.5)
 
             self.__read_board()
             
