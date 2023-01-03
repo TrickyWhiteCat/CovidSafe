@@ -3,7 +3,6 @@ import os
 
 import config
 
-
 class CovidGame:
     def __init__(self, board_size, num_virus, board_filepath = None, command_filepath = None):
         self.board_size = board_size
@@ -280,10 +279,10 @@ class CovidGame:
         #input("Press enter to exit.")
 
 def main():
-    game = CovidGame(board_size=16,
-                    num_virus=40,
-                    board_filepath="board.out",
-                    command_filepath="command.inp")
+    game = CovidGame(board_size=config.board_size,
+                    num_virus=config.num_virus,
+                    board_filepath=config.board_path,
+                    command_filepath=config.cmd_path)
     game.play()
 
 if __name__ == "__main__":

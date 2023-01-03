@@ -1,8 +1,13 @@
+import config
+import setup
+
+required  = {'numpy', 'ortools'}
+setup.setup(required)
+
+
 from multiprocessing import Process
 import subprocess
-import os
 
-import config
 
 def clear(*files):
     for filename in files:
