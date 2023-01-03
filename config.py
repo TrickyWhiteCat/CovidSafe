@@ -7,4 +7,4 @@ result_path = "csp_test.txt"
 
 # Solver args
 first_pos = None
-wait = 0.2
+wait = 0.05

@@ -16,6 +16,7 @@ def run_solver():
     subprocess.run(["python", "solver.py"], shell=True)
 
 if __name__ == "__main__":
+    #clear(config.result_path)
     clear(config.board_path, config.cmd_path)
     os.system("wt python solver.py")
     os.system("wt python game.py")
