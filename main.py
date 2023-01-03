@@ -3,8 +3,6 @@ from solver import Solver
 
 from multiprocessing import Process
 
-from ortools.sat.python import cp_model
-
 def clear(*files):
     for filename in files:
         with open(filename, 'w') as file:

@@ -191,7 +191,7 @@ class Solver:
             # This dict containing pairs of key and value where the key is the position of a cell and the value is whether that cell contains virus
             neighbor_dict = util.neighbors(board=self.__virus_map, row=row, col=col) 
             self.__cp_model.Add(sum(neighbor_dict.values()) == int(self.__board_state[row][col]))
-            return
+        return var
 
 
     def __choose_pos(self) -> tuple:
@@ -222,6 +222,12 @@ class Solver:
         if has_V:
             self.solved = True
 
+    def __solve_as_csp(self):
+        var = self.__create_csp_variables()
+        sol = util.CSPSolution(variables=var)
+        self.__cp_solver.SearchForAllSolutions(self.__cp_model, sol)
+        print(sol)
+
 
     def solve(self):
         self.__iter = 1
@@ -248,7 +254,7 @@ class Solver:
                 continue # Codes below are used to choose a random cell to open, which is redundant if we flagged or opened a cell in current iteration
                 '''
             if self.__border:
-                self.__create_csp_variables()
+                self.__solve_as_csp()
 
             self.__check_finished()
             if self.__finished:
@@ -264,7 +270,7 @@ class Solver:
 def main():
     board_path = f"board.out"
     cmd_path = f"command.inp"
-    result_path = "csp_test"
+    result_path = "csp_test.txt"
 
     solver = Solver(path_to_board=board_path,
                     path_to_command=cmd_path,
