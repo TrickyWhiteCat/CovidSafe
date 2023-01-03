@@ -1,4 +1,4 @@
-#COVIDSafe
+#  COVIDSafe
 
 COVIDSafe helps quickly identify and contact people who may have been exposed to COVID-19 (called ‘close contacts’). The game will not protect you from viruses and will not warn you as soon as you get close to someone infected with a virus. You must try hard social distancing and access information about infected people.
 ## Idea
