@@ -1,8 +1,9 @@
-from multiprocessing import Process
-
 from game import CovidGame
 from solver import Solver
 
+from multiprocessing import Process
+
+from ortools.sat.python import cp_model
 
 def clear(*files):
     for filename in files:
@@ -28,15 +29,9 @@ def run(index:int = 0, num_trials=1000, first_pos=None, result_path=None):
 
 if __name__ == "__main__":
     
-    NUM_CORES = 2
-
-    for row in range(15, 0, -1):
-        for col in range(15, 0, -1):
-            result_path = f"{row}_{col}.txt"
-
-            processes = [Process(target = run, args=[core_idx, 500, (row, col), result_path]) for core_idx in range(NUM_CORES)]
-            for process in processes:
-                process.start()
-
-            while sum([process.is_alive() for process in processes]):
-                pass
+    result_path = f"csp_test.txt"
+    board_path = f"board.out"
+    cmd_path = f"command.inp"
+    clear(board_path, cmd_path)
+    game = CovidGame(11, 10, board_filepath=board_path, command_filepath=cmd_path)
+    game.play()
