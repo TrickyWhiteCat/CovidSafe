@@ -1,13 +1,13 @@
 import numpy as np
 import os
 
+import config
 
 class CovidGame:
     def __init__(self, board_size, num_virus, board_filepath = None, command_filepath = None):
         self.board_size = board_size
         self.num_virus = num_virus
         self.num_virus_left = num_virus
-        self.board_filepath = board_filepath
         self.board_filepath = board_filepath
         self.command_filepath = command_filepath
 
@@ -276,3 +276,14 @@ class CovidGame:
                 self.creat_board()
                 print('YOU WIN!!!')
                 self.over = True
+        #input("Press enter to exit.")
+
+def main():
+    game = CovidGame(board_size=config.board_size,
+                    num_virus=config.num_virus,
+                    board_filepath=config.board_path,
+                    command_filepath=config.cmd_path)
+    game.play()
+
+if __name__ == "__main__":
+    main()

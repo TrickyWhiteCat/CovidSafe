@@ -1,17 +1,22 @@
 import util
+import config
 
 import random
 import time
+import logging
 
 import numpy as np
 
 from ortools.sat.python import cp_model
 
+log_path = "solver.log"
+util.clear(log_path)
+logging.basicConfig(filename=log_path, level=logging.INFO)
 class Solver:
     def __init__(self, path_to_board: str = None, path_to_command: str = None, **kwargs):
         """
-        `path_to_board`: path to the csv file containing data from the board.
-        `path_to_command`: path to the csv file containing command (output from the solver)"""
+        `path_to_board`: path to the file containing data from the board.
+        `path_to_command`: path to the file containing command (output from the solver)"""
         if path_to_board is None:
             path_to_board = "board.out"
         self.board_path = path_to_board
@@ -20,10 +25,10 @@ class Solver:
             path_to_command = "command.inp"
         self.command_path = path_to_command
 
-        try:
+        try: # The file that the result will be written to. Useful when the game is run more than 1 time
             self.result_path = kwargs["result_path"]
         except KeyError:
-            self.result_path = "result.txt"
+            self.result_path = None
 
         try:
             self.__first_pos = kwargs["first_pos"]
@@ -34,13 +39,26 @@ class Solver:
             self.__cp_model = kwargs["cp_model"]
             self.__cp_solver = kwargs["cp_solver"]
         except KeyError:
-            self.__cpmodel = None
-            self.__cpsolver = None
+            self.__cp_model = None
+            self.__cp_solver = None
 
         try: # Set timeout for csp solver
             self.__csp_timeout = kwargs["csp_timeout"]
         except KeyError:
-            self.__csp_timeout = 60
+            self.__csp_timeout = 30
+
+        try: # Wait for a few seconds before executing the next iteration
+            self.__wait = kwargs["wait"]
+        except KeyError:
+            self.__wait = None
+
+        logging.info(f"""Solver object was created with config:
+                            board_path = {self.board_path}
+                            command_path = {self.command_path}
+                            result_path = {self.result_path}
+                            cp_model = {self.__cp_model}
+                            cp_solver = {self.__cp_solver}
+                            timeout = {self.__csp_timeout}""")
 
         self.__iter = 0 # Used to sync between solver and game board
         self.solved = False # Whether the problem has been solved
@@ -121,7 +139,12 @@ class Solver:
         if ((row is None) and (col is None) and (mark is None)):
             (row, col), mark = self.__choose_pos()
 
+        if self.__wait:
+            time.sleep(self.__wait)
+
         self.__read_board() # Called to wait for sync
+        
+        logging.info(f"Cell {(row, col)} was {'marked' if mark else 'revrealed'}.")
 
         content = f"{row + 1} {col + 1} M" if mark else f"{row + 1} {col + 1}" # Board are indexed from 1 instead of 0
         with open(self.command_path, mode = 'w') as cmd:
@@ -214,10 +237,12 @@ class Solver:
         Return: ((row, col), mark)"""
         if self.__mark: # Prioritize marking bad cells
             pos = self.__mark.pop(0)
+            logging.info(f"Marking cell {pos}...")
             return pos, True
 
         if self.__safe:
             pos = self.__safe.pop(0)
+            logging.info(f"Revealing cell {pos}...")
             return pos, False
 
         return random.choice(self.__undiscovered), False
@@ -232,20 +257,42 @@ class Solver:
             if " " in row: # If we won (all cells are opened) then this case will never happen
                 if has_V:
                     self.solved = False
+                    logging.critical("Fail to solve the problem.")
                     return
 
         if has_V:
             self.solved = True
+            logging.critical("Problem solved.")
+
+    def __board_has_zero(self):
+        for row in self.__board_state:
+            for cell in row:
+                if cell == "0":
+                    return True
+        return False
 
     def __solve_as_csp(self):
         if self.__cp_model is None or self.__cp_solver is None:
             return
-        print("Trying to use CSP...")
+
+        if self.__board_has_zero():
+            pass
+        else:
+            logging.warn("Not enough context!")
+            return
+        
+        timeout = self.__csp_timeout
+        if timeout:
+            self.__cp_solver.parameters.max_time_in_seconds = self.__csp_timeout
+            print(f"Trying to use CSP (timeout duration: {timeout}s)...")
+        else:
+            print(f"Trying to use CSP")
         var, var_pos = self.__create_csp_variables()
         res = util.CSPSolution(variables=var)
+        logging.info("Preparing to use CpSolver...")
         self.__cp_solver.SearchForAllSolutions(self.__cp_model, res)
-        self.__cp_solver.parameters.max_time_in_seconds = self.__csp_timeout
         if len(res.solution_list) == 0:
+            logging.warn("No solution found!")
             return
 
         first_row = res.solution_list[0]
@@ -277,7 +324,6 @@ class Solver:
             self.__write_command(row=self.__first_pos[0], col=self.__first_pos[1], mark=False)
 
         while not self.__finished:
-            #time.sleep(0.5)
 
             self.__read_board()
             
@@ -293,7 +339,7 @@ class Solver:
             if self.__safe or self.__mark:
                 while self.__mark or self.__safe:
                     self.__write_command()
-                continue # Codes below are used to choose a random cell to open, which is redundant if we flagged or opened a cell in current iteration
+                continue # Codes below are used if we cannot use logic
                 
             if self.__border:
                 self.__solve_as_csp()
@@ -310,21 +356,25 @@ class Solver:
             # A random cell
             self.__write_command()
         
-        #if self.__iter != 2: # Skip lost from the beginning
-        with open(self.result_path, 'a') as res_file:
-            res_file.write(f"{int(self.solved)}\n")
+        if self.__iter != 1 and self.result_path is not None: # Skip lost from the beginning
+            with open(self.result_path, 'a') as res_file:
+                res_file.write(f"{int(self.solved)}\n")
 
 def main():
-    board_path = f"board.out"
-    cmd_path = f"command.inp"
-    result_path = "csp_test.txt"
-
-    solver = Solver(path_to_board=board_path,
-                    path_to_command=cmd_path,
-                    first_pos=None,
-                    result_path=result_path,
-                    cp_model = cp_model.CpModel(),
-                    cp_solver = cp_model.CpSolver())
+    if config.use_cp_model:
+        cpmodel = cp_model.CpModel()
+        cpsolver = cp_model.CpSolver()
+    else:
+        cpmodel = None
+        cpsolver = None
+    solver = Solver(path_to_board=config.board_path,
+                    path_to_command=config.cmd_path,
+                    first_pos=config.first_pos,
+                    result_path=config.result_path,
+                    cp_model = cpmodel,
+                    cp_solver = cpsolver,
+                    timeout = config.timeout,
+                    wait=config.wait)
 
     solver.solve()
 
