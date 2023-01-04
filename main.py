@@ -1,9 +1,9 @@
-import config
 import setup
 
 required  = {'numpy', 'ortools'}
 setup.setup(required)
 
+import config
 
 from multiprocessing import Process
 import subprocess
