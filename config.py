@@ -3,7 +3,7 @@ import util
 board_path = f"board.out"
 cmd_path = f"command.inp"
 
-result_path = "csp.txt"
+result_path = None
 
 # Solver args
 first_pos = None
