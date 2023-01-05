@@ -353,7 +353,7 @@ class Solver:
             # A random cell
             self.__write_command()
         
-        if self.__iter != 1 and self.result_path is not None: # Skip lost from the beginning
+        if self.result_path is not None:
             with open(self.result_path, 'a') as res_file:
                 res_file.write(f"{int(self.solved)}\n")
 
