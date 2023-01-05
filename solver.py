@@ -35,8 +35,10 @@ class Solver:
         except KeyError:
             self.__first_pos = None
 
-        try: # Try to get CSP and Solver
+        try: # Whether to use cp_solver or not
             self.__use_cp_solver = kwargs["use_cp_solver"]
+            if self.__use_cp_solver:
+                self.__cp_solver = cp_model.CpSolver()
         except KeyError:
             self.__use_cp_solver = False
 
@@ -205,7 +207,7 @@ class Solver:
     def __create_csp_variables(self):
         var = []
         var_pos = []
-        self.__cp_model = cp_model.CpModel()
+        model = cp_model.CpModel()
         for row, col in self.__border:
             cell_neighbor = self.__neighbors(row, col)
 
@@ -216,18 +218,18 @@ class Solver:
                         continue
                     var_pos.append((neighbor_row, neighbor_col))
 
-                    int_var = self.__cp_model.NewIntVar(0, 1, name=f"{neighbor_row} {neighbor_col}")
+                    int_var = model.NewIntVar(0, 1, name=f"{neighbor_row} {neighbor_col}")
                     self.__virus_map[neighbor_row][neighbor_col] = int_var
                     var.append(int_var)
             
             # This dict containing pairs of key and value where the key is the position of a cell and the value is whether that cell contains virus
             neighbor_dict = util.neighbors(board=self.__virus_map, row=row, col=col) 
-            self.__cp_model.Add(sum(neighbor_dict.values()) == int(self.__board_state[row][col]))
+            model.Add(sum(neighbor_dict.values()) == int(self.__board_state[row][col]))
         
         # Total number of viruses found must be smaller than num_virus_left
-        self.__cp_model.Add(sum(var) <= self.__num_virus_left)
+        model.Add(sum(var) <= self.__num_virus_left)
 
-        return var, var_pos
+        return model, var, var_pos
 
 
     def __choose_pos(self) -> tuple:
@@ -270,8 +272,7 @@ class Solver:
         return False
 
     def __solve_as_csp(self):
-        self.__cp_solver = cp_model.CpSolver()
-
+        # CpSolver is stateless, no need to create a new one in every function call.
         if self.__board_has_zero():
             pass
         else:
@@ -284,10 +285,10 @@ class Solver:
             print(f"Trying to use CSP (timeout duration: {timeout}s)...")
         else:
             print(f"Trying to use CSP")
-        var, var_pos = self.__create_csp_variables()
+        model, var, var_pos = self.__create_csp_variables()
         res = util.CSPSolution(variables=var)
         logging.info("Preparing to use CpSolver...")
-        status = self.__cp_solver.SearchForAllSolutions(self.__cp_model, res)
+        status = self.__cp_solver.SearchForAllSolutions(model, res)
         if len(res.solution_list) == 0:
             logging.warn("No solution found!")
             return status

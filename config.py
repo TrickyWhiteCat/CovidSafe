@@ -6,7 +6,7 @@ result_path = "result.txt"
 # Solver args
 first_pos = None
 wait = None
-use_cp_solver = True
+use_cp_solver = False
 timeout = 30
 
 # Game args
