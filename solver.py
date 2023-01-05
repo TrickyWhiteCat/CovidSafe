@@ -35,11 +35,9 @@ class Solver:
         except KeyError:
             self.__first_pos = None
 
-        try: # Try to get CSP Model and Solver
-            self.__cp_model = kwargs["cp_model"]
-            self.__cp_solver = kwargs["cp_solver"]
+        try: # Try to get CSP and Solver
+            self.__use_cp_solver = kwargs["use_cp_solver"]
         except KeyError:
-            self.__cp_model = None
             self.__cp_solver = None
 
         try: # Set timeout for csp solver
@@ -208,6 +206,7 @@ class Solver:
     def __create_csp_variables(self):
         var = []
         var_pos = []
+        self.__cp_model = cp_model.CpModel()
         for row, col in self.__border:
             cell_neighbor = self.__neighbors(row, col)
 
@@ -272,14 +271,13 @@ class Solver:
         return False
 
     def __solve_as_csp(self):
-        if self.__cp_model is None or self.__cp_solver is None:
-            return
+        self.__cp_solver = cp_model.CpSolver()
 
         if self.__board_has_zero():
             pass
         else:
             logging.warn("Not enough context!")
-            return
+            return "UNKNOWN"
         
         timeout = self.__csp_timeout
         if timeout:
@@ -290,10 +288,10 @@ class Solver:
         var, var_pos = self.__create_csp_variables()
         res = util.CSPSolution(variables=var)
         logging.info("Preparing to use CpSolver...")
-        self.__cp_solver.SearchForAllSolutions(self.__cp_model, res)
+        status = self.__cp_solver.SearchForAllSolutions(self.__cp_model, res)
         if len(res.solution_list) == 0:
             logging.warn("No solution found!")
-            return
+            return status
 
         first_row = res.solution_list[0]
         for case in res.solution_list:
@@ -312,9 +310,8 @@ class Solver:
 
             if val == 0:
                 self.__safe.append(pos)
-
-        return
-
+        
+        return status
 
     def solve(self):
         self.__iter = 0
@@ -342,7 +339,7 @@ class Solver:
                 continue # Codes below are used if we cannot use logic
                 
             if self.__border:
-                self.__solve_as_csp()
+                self.__cp_status = self.__solve_as_csp()
 
             if self.__safe or self.__mark:
                 while self.__mark or self.__safe:
@@ -361,18 +358,11 @@ class Solver:
                 res_file.write(f"{int(self.solved)}\n")
 
 def main():
-    if config.use_cp_model:
-        cpmodel = cp_model.CpModel()
-        cpsolver = cp_model.CpSolver()
-    else:
-        cpmodel = None
-        cpsolver = None
     solver = Solver(path_to_board=config.board_path,
                     path_to_command=config.cmd_path,
                     first_pos=config.first_pos,
                     result_path=config.result_path,
-                    cp_model = cpmodel,
-                    cp_solver = cpsolver,
+                    use_cp_solver = config.use_cp_solver,
                     timeout = config.timeout,
                     wait=config.wait)
 
