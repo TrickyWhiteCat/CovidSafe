@@ -1,12 +1,12 @@
 board_path = f"board.out"
 cmd_path = f"command.inp"
 
-result_path = "result.txt"
+result_path = "csp.txt"
 
 # Solver args
 first_pos = None
 wait = None
-use_cp_solver = False
+use_cp_solver = True
 timeout = 30
 
 # Game args
