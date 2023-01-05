@@ -38,7 +38,7 @@ class Solver:
         try: # Try to get CSP and Solver
             self.__use_cp_solver = kwargs["use_cp_solver"]
         except KeyError:
-            self.__cp_solver = None
+            self.__use_cp_solver = False
 
         try: # Set timeout for csp solver
             self.__csp_timeout = kwargs["csp_timeout"]
@@ -54,8 +54,7 @@ class Solver:
                             board_path = {self.board_path}
                             command_path = {self.command_path}
                             result_path = {self.result_path}
-                            cp_model = {self.__cp_model}
-                            cp_solver = {self.__cp_solver}
+                            use_cp_solver = {self.__use_cp_solver}
                             timeout = {self.__csp_timeout}""")
 
         self.__iter = 0 # Used to sync between solver and game board
@@ -338,8 +337,8 @@ class Solver:
                     self.__write_command()
                 continue # Codes below are used if we cannot use logic
                 
-            if self.__border:
-                self.__cp_status = self.__solve_as_csp()
+            if self.__border and self.__use_cp_solver:
+                self.__solve_as_csp()
 
             if self.__safe or self.__mark:
                 while self.__mark or self.__safe:

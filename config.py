@@ -5,7 +5,7 @@ result_path = "result.txt"
 
 # Solver args
 first_pos = None
-wait = 0.05
+wait = None
 use_cp_solver = True
 timeout = 30
 
