@@ -1,14 +1,22 @@
 import numpy as np
 import os
 import time
+import logging
 
 import config
+import util
+
+log_path = "game.log"
+util.clear(log_path)
+logging.basicConfig(filename=log_path, level=logging.INFO)
 
 class CovidGame:
     def __init__(self, board_size, num_virus, board_filepath = None, command_filepath = None, **kwawgs):
         self.board_size = board_size
         self.num_virus = num_virus
         self.num_virus_left = num_virus
+
+        util.clear(board_filepath, command_filepath)
         self.board_filepath = board_filepath
         self.command_filepath = command_filepath
 
@@ -26,6 +34,10 @@ class CovidGame:
         self.instruction()
         self.over = False
         self.iter = 0
+
+        logging.info(f'''Board created with virus position:''')
+        for idx, row in enumerate(self.values):
+            logging.info(f"{idx} {row}")
 
     def creat_board(self):
         

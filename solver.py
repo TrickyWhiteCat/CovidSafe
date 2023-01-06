@@ -56,6 +56,7 @@ class Solver:
                             board_path = {self.board_path}
                             command_path = {self.command_path}
                             result_path = {self.result_path}
+                            first_pos = {self.__first_pos}
                             use_cp_solver = {self.__use_cp_solver}
                             timeout = {self.__csp_timeout}""")
 
@@ -203,7 +204,6 @@ class Solver:
             if count_bad == cell_value: # Our cell has already contact enough bad cells. Other undiscovered cells are safe to open
                 self.__safe.extend(undiscovered)
 
-
     def __create_csp_variables(self):
         var = []
         var_pos = []
@@ -216,11 +216,11 @@ class Solver:
                 if self.__board_state[neighbor_row][neighbor_col] == " ":
                     if (neighbor_row, neighbor_col) in var_pos:
                         continue
-                    var_pos.append((neighbor_row, neighbor_col))
 
                     int_var = model.NewIntVar(0, 1, name=f"{neighbor_row} {neighbor_col}")
                     self.__virus_map[neighbor_row][neighbor_col] = int_var
                     var.append(int_var)
+                    var_pos.append((neighbor_row, neighbor_col))
             
             # This dict containing pairs of key and value where the key is the position of a cell and the value is whether that cell contains virus
             neighbor_dict = util.neighbors(board=self.__virus_map, row=row, col=col) 
@@ -305,10 +305,10 @@ class Solver:
 
             pos = var_pos[idx]
             
-            if val == 1: # 1 means that cell contains a virus
+            if val == 1 and pos not in self.__mark: # 1 means that cell contains a virus
                 self.__mark.append(pos)
 
-            if val == 0:
+            if val == 0 and pos not in self.__safe:
                 self.__safe.append(pos)
         
         return status
