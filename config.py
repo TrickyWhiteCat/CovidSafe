@@ -1,10 +1,10 @@
 board_path = f"board.out"
 cmd_path = f"command.inp"
+result_path = f"result.txt"
 
 
 # Solver args
-first_pos = (None, None)
-result_path = f"{first_pos[0]}_{first_pos[1]}_noCSP.txt" ######
+first_pos = None
 wait = 0
 use_cp_solver = False
 timeout = 30
