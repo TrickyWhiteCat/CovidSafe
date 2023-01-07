@@ -16,6 +16,8 @@ Head to `config.py` to modify run configuration:
 - `board_path`: the file that our game writes down its state to and solver uses to read game state
 - `cmd_path`: the file that our solver writes down commands to and the game uses to read commands.
 - `first_pos`: position of the first cell to be revealed. If `None` then a random cell will be chosen.
+- `use_least_square`: choose whether to consider the CSP problem as a linear system and use least square to solve it.
+- `use_cp_solver`: choose use or not to use our 2nd method in the report.
 - `wait`: the number of seconds that our solver will wait before writing down the next command.
 - `timeout`: the amount of time (in seconds) that we wait for `CpSolver` to find all the solutions. If `None` then there will be no time limit.
 - `board_size`: size of the game board

@@ -35,12 +35,17 @@ class Solver:
         except KeyError:
             self.__first_pos = None
 
-        try: # Try to get CSP Model and Solver
-            self.__cp_model = kwargs["cp_model"]
-            self.__cp_solver = kwargs["cp_solver"]
+        try: # Whether to solve as a linear system using least square method
+            self.__use_least_square = kwargs["use_least_square"]
         except KeyError:
-            self.__cp_model = None
-            self.__cp_solver = None
+            self.__use_least_square = False
+
+        try: # Whether to use cp_solver or not
+            self.__use_cp_solver = kwargs["use_cp_solver"]
+            if self.__use_cp_solver:
+                self.__cp_solver = cp_model.CpSolver()
+        except KeyError:
+            self.__use_cp_solver = False
 
         try: # Set timeout for csp solver
             self.__csp_timeout = kwargs["csp_timeout"]
@@ -56,8 +61,8 @@ class Solver:
                             board_path = {self.board_path}
                             command_path = {self.command_path}
                             result_path = {self.result_path}
-                            cp_model = {self.__cp_model}
-                            cp_solver = {self.__cp_solver}
+                            first_pos = {self.__first_pos}
+                            use_cp_solver = {self.__use_cp_solver}
                             timeout = {self.__csp_timeout}""")
 
         self.__iter = 0 # Used to sync between solver and game board
@@ -68,7 +73,7 @@ class Solver:
         self.__border = [] # A list of positions of cells that are in the border. Go to __find_cells_in_border to read more.
         self.__undiscovered = [] # A list of positions of cells that aren't opened
 
-    def __find_cells_in_border(self) -> list:
+    def __find_cells_in_border(self):
         """Return a list of positions of cells that are discovered and containing positive numbers whose neighbors aren't fully discovered.
         
         Example:
@@ -85,7 +90,11 @@ class Solver:
             for col_idx, cell in enumerate(row):
                 try:
                     if int(cell) > 0: # Will throw a ValueError if that cell contains "V" or " " and the condition will be Falsed if the cell's value is 0
-                        self.__border.append((row_idx, col_idx))
+                        neighbors = self.__neighbors(row = row_idx, col = col_idx)
+                        for neighbor_row, neighbor_col in neighbors:
+                            if self.__board_state[neighbor_row][neighbor_col] == " ":
+                                self.__border.append((row_idx, col_idx))
+                                break
                 except ValueError:
                     pass  
 
@@ -129,7 +138,7 @@ class Solver:
                                     self.__undiscovered.append((row_idx, col_idx))
                                     
                         self.__board_state = board_state
-                        self.__virus_map = (np.array(board_state) == "M").astype(int).tolist() # We want to maintain the consistent use of list but numpy provide a convinient way to get the variable
+                        self.__virus_map = (np.array(board_state) == "M").astype(int).tolist() # We want to maintain the consistency use of list but numpy provide a convinient way to get the variable
                         return
                 except ValueError:
                     pass
@@ -144,7 +153,7 @@ class Solver:
 
         self.__read_board() # Called to wait for sync
         
-        logging.info(f"Cell {(row, col)} was {'marked' if mark else 'revrealed'}.")
+        logging.info(f"Cell {(row, col)} was {'marked' if mark else 'revealed'}.")
 
         content = f"{row + 1} {col + 1} M" if mark else f"{row + 1} {col + 1}" # Board are indexed from 1 instead of 0
         with open(self.command_path, mode = 'w') as cmd:
@@ -177,6 +186,7 @@ class Solver:
                         undiscovered.append(pos)
             
             if count_undiscovered == cell_value:
+                logging.info(f"New cell to mark from discovering {(cell_row, cell_col)}: {undiscovered}")
                 self.__mark.extend(undiscovered)
 
     def __find_safe_cells(self):
@@ -202,12 +212,13 @@ class Solver:
                     undiscovered.append(pos)
             
             if count_bad == cell_value: # Our cell has already contact enough bad cells. Other undiscovered cells are safe to open
+                logging.info(f"New safe to open cell after discovering {(cell_row, cell_col)}: {undiscovered}")
                 self.__safe.extend(undiscovered)
-
 
     def __create_csp_variables(self):
         var = []
         var_pos = []
+        model = cp_model.CpModel()
         for row, col in self.__border:
             cell_neighbor = self.__neighbors(row, col)
 
@@ -216,21 +227,75 @@ class Solver:
                 if self.__board_state[neighbor_row][neighbor_col] == " ":
                     if (neighbor_row, neighbor_col) in var_pos:
                         continue
-                    var_pos.append((neighbor_row, neighbor_col))
 
-                    int_var = self.__cp_model.NewIntVar(0, 1, name=f"{neighbor_row} {neighbor_col}")
+                    int_var = model.NewIntVar(0, 1, name=f"{neighbor_row} {neighbor_col}")
                     self.__virus_map[neighbor_row][neighbor_col] = int_var
                     var.append(int_var)
+                    var_pos.append((neighbor_row, neighbor_col))
             
             # This dict containing pairs of key and value where the key is the position of a cell and the value is whether that cell contains virus
             neighbor_dict = util.neighbors(board=self.__virus_map, row=row, col=col) 
-            self.__cp_model.Add(sum(neighbor_dict.values()) == int(self.__board_state[row][col]))
+            model.Add(sum(neighbor_dict.values()) == int(self.__board_state[row][col]))
         
         # Total number of viruses found must be smaller than num_virus_left
-        self.__cp_model.Add(sum(var) <= self.__num_virus_left)
+        model.Add(sum(var) <= self.__num_virus_left)
 
-        return var, var_pos
+        return model, var, var_pos
 
+    def __create_linear_system_vars(self):
+        var_pos = []
+        target = []
+        neighbor_dict = {}
+        for row, col in self.__border:
+            neighbor_dict[(row, col)] = self.__neighbors(row, col)
+            cell_neighbor = neighbor_dict[(row, col)]
+
+            count_surounding_virus = 0
+            # Making neighbors cells IntVar if they are unrevealed (have values == " ")
+            for neighbor_row, neighbor_col in cell_neighbor:
+                if self.__virus_map[neighbor_row][neighbor_col]: # Cell contains virus
+                    count_surounding_virus += 1
+                    continue
+
+                if self.__board_state[neighbor_row][neighbor_col] == " ":
+                    if (neighbor_row, neighbor_col) in var_pos: # Cell was known and added to the list of var
+                        continue
+                    var_pos.append((neighbor_row, neighbor_col))
+
+            target.append(int(self.__board_state[row][col]) - count_surounding_virus) # __board_state contains strings
+
+        # Create parameter matrix
+        param = np.zeros(shape=(len(target), len(var_pos)))
+
+        for idx, (row, col) in enumerate(self.__border): # Since `param`'s rows correspond to a constraint assosiated with a cell in border, this for loop is equivalent to iterating through `param`'s rows
+            for pos in neighbor_dict[(row, col)]:
+                if pos in var_pos:
+                    param[idx][var_pos.index(pos)] = 1
+    
+        return var_pos, param, target
+
+    def __solve_with_least_square(self):
+        logging.debug("Using least square")
+        var, param, target = self.__create_linear_system_vars()
+        # Solving param @ var = target. Since there can be many solutions, we use least square method.
+        # The parts of `var` that unchange between solutions should have value around its true value (1 if contain virus and 0 otherwise)
+        res = np.linalg.lstsq(param, target, rcond=None)[0]
+
+        int_res = np.around(res)
+        threshold = 10**-8
+        flag = (np.abs(res - int_res) < threshold) # Result may be slightly off because of machine precision
+
+        for idx, pos in enumerate(var):
+            if flag[idx]:
+                if int_res[idx] == 1:
+                    self.__mark.append(pos)
+                    logging.info(f"Cell {pos} is virus")
+                if int_res[idx] == 0:
+                    self.__safe.append(pos)
+                    logging.info(f"Cell {pos} is safe")
+
+        if not sum(flag):
+            logging.warning(f"No context found using least square solver")
 
     def __choose_pos(self) -> tuple:
         """Return the position of cell to be chosen and whether we mark it as bad cell or not.
@@ -245,7 +310,9 @@ class Solver:
             logging.info(f"Revealing cell {pos}...")
             return pos, False
 
-        return random.choice(self.__undiscovered), False
+        random_cell = random.choice(self.__undiscovered)
+        logging.warning(f"Cell {random_cell} was randomly chosen.")
+        return random_cell, False
 
     def __check_finished(self):
         has_V = False
@@ -272,14 +339,12 @@ class Solver:
         return False
 
     def __solve_as_csp(self):
-        if self.__cp_model is None or self.__cp_solver is None:
-            return
-
+        # CpSolver is stateless, no need to create a new one in every function call.
         if self.__board_has_zero():
             pass
         else:
-            logging.warn("Not enough context!")
-            return
+            logging.warning("Not enough context!")
+            return "UNKNOWN"
         
         timeout = self.__csp_timeout
         if timeout:
@@ -287,13 +352,13 @@ class Solver:
             print(f"Trying to use CSP (timeout duration: {timeout}s)...")
         else:
             print(f"Trying to use CSP")
-        var, var_pos = self.__create_csp_variables()
+        model, var, var_pos = self.__create_csp_variables()
         res = util.CSPSolution(variables=var)
         logging.info("Preparing to use CpSolver...")
-        self.__cp_solver.SearchForAllSolutions(self.__cp_model, res)
+        status = self.__cp_solver.SearchForAllSolutions(model, res)
         if len(res.solution_list) == 0:
-            logging.warn("No solution found!")
-            return
+            logging.warning("No solution found!")
+            return status
 
         first_row = res.solution_list[0]
         for case in res.solution_list:
@@ -307,14 +372,13 @@ class Solver:
 
             pos = var_pos[idx]
             
-            if val == 1: # 1 means that cell contains a virus
+            if val == 1 and pos not in self.__mark: # 1 means that cell contains a virus
                 self.__mark.append(pos)
 
-            if val == 0:
+            if val == 0 and pos not in self.__safe:
                 self.__safe.append(pos)
-
-        return
-
+        
+        return status
 
     def solve(self):
         self.__iter = 0
@@ -340,8 +404,11 @@ class Solver:
                 while self.__mark or self.__safe:
                     self.__write_command()
                 continue # Codes below are used if we cannot use logic
+
+            if self.__border and self.__use_least_square:
+                self.__solve_with_least_square()
                 
-            if self.__border:
+            if self.__border and self.__use_cp_solver:
                 self.__solve_as_csp()
 
             if self.__safe or self.__mark:
@@ -356,23 +423,17 @@ class Solver:
             # A random cell
             self.__write_command()
         
-        if self.__iter != 1 and self.result_path is not None: # Skip lost from the beginning
+        if self.result_path is not None:
             with open(self.result_path, 'a') as res_file:
                 res_file.write(f"{int(self.solved)}\n")
 
 def main():
-    if config.use_cp_model:
-        cpmodel = cp_model.CpModel()
-        cpsolver = cp_model.CpSolver()
-    else:
-        cpmodel = None
-        cpsolver = None
     solver = Solver(path_to_board=config.board_path,
                     path_to_command=config.cmd_path,
                     first_pos=config.first_pos,
                     result_path=config.result_path,
-                    cp_model = cpmodel,
-                    cp_solver = cpsolver,
+                    use_least_square = config.use_least_square,
+                    use_cp_solver = config.use_cp_solver,
                     timeout = config.timeout,
                     wait=config.wait)
 
