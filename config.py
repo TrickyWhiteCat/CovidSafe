@@ -1,7 +1,6 @@
 board_path = f"board.out"
 cmd_path = f"command.inp"
 result_path = f"result.txt"
-result_path = f"result.txt"
 
 
 # Solver args
