@@ -215,7 +215,7 @@ class Solver:
                 logging.info(f"New safe to open cell after discovering {(cell_row, cell_col)}: {undiscovered}")
                 self.__safe.extend(undiscovered)
 
-    def __create_csp_variables(self):
+    def __create_cp_variables(self):
         var = []
         var_pos = []
         model = cp_model.CpModel()
@@ -340,6 +340,7 @@ class Solver:
 
     def __solve_as_csp(self):
         # CpSolver is stateless, no need to create a new one in every function call.
+        
         if self.__board_has_zero():
             pass
         else:
@@ -352,7 +353,7 @@ class Solver:
             print(f"Trying to use CSP (timeout duration: {timeout}s)...")
         else:
             print(f"Trying to use CSP")
-        model, var, var_pos = self.__create_csp_variables()
+        model, var, var_pos = self.__create_cp_variables()
         res = util.CSPSolution(variables=var)
         logging.info("Preparing to use CpSolver...")
         status = self.__cp_solver.SearchForAllSolutions(model, res)
