@@ -1,7 +1,6 @@
-import util
-
 board_path = f"board.out"
 cmd_path = f"command.inp"
+result_path = f"result.txt"
 result_path = f"result.txt"
 
 
@@ -15,3 +14,4 @@ timeout = 30
 # Game args
 board_size = 9
 num_virus = 10
+board_wait = None

@@ -46,6 +46,7 @@ class Solver:
                 self.__cp_solver = cp_model.CpSolver()
         except KeyError:
             self.__use_cp_solver = False
+            self.__use_cp_solver = False
 
         try: # Set timeout for csp solver
             self.__csp_timeout = kwargs["csp_timeout"]
@@ -61,6 +62,8 @@ class Solver:
                             board_path = {self.board_path}
                             command_path = {self.command_path}
                             result_path = {self.result_path}
+                            first_pos = {self.__first_pos}
+                            use_cp_solver = {self.__use_cp_solver}
                             first_pos = {self.__first_pos}
                             use_cp_solver = {self.__use_cp_solver}
                             timeout = {self.__csp_timeout}""")
@@ -219,6 +222,7 @@ class Solver:
         var = []
         var_pos = []
         model = cp_model.CpModel()
+        model = cp_model.CpModel()
         for row, col in self.__border:
             cell_neighbor = self.__neighbors(row, col)
 
@@ -229,12 +233,15 @@ class Solver:
                         continue
 
                     int_var = model.NewIntVar(0, 1, name=f"{neighbor_row} {neighbor_col}")
+                    int_var = model.NewIntVar(0, 1, name=f"{neighbor_row} {neighbor_col}")
                     self.__virus_map[neighbor_row][neighbor_col] = int_var
                     var.append(int_var)
+                    var_pos.append((neighbor_row, neighbor_col))
                     var_pos.append((neighbor_row, neighbor_col))
             
             # This dict containing pairs of key and value where the key is the position of a cell and the value is whether that cell contains virus
             neighbor_dict = util.neighbors(board=self.__virus_map, row=row, col=col) 
+            model.Add(sum(neighbor_dict.values()) == int(self.__board_state[row][col]))
             model.Add(sum(neighbor_dict.values()) == int(self.__board_state[row][col]))
         
         # Total number of viruses found must be smaller than num_virus_left
@@ -357,6 +364,7 @@ class Solver:
         res = util.CSPSolution(variables=var)
         logging.info("Preparing to use CpSolver...")
         status = self.__cp_solver.SearchForAllSolutions(model, res)
+        status = self.__cp_solver.SearchForAllSolutions(model, res)
         if len(res.solution_list) == 0:
             logging.warning("No solution found!")
             return status
@@ -378,6 +386,8 @@ class Solver:
 
             if val == 0 and pos not in self.__safe:
                 self.__safe.append(pos)
+        
+        return status
         
         return status
 

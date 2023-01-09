@@ -1,15 +1,29 @@
 import numpy as np
 import os
+import time
+import logging
 
 import config
+import util
+
+log_path = "game.log"
+util.clear(log_path)
+logging.basicConfig(filename=log_path, level=logging.INFO)
 
 class CovidGame:
-    def __init__(self, board_size, num_virus, board_filepath = None, command_filepath = None):
+    def __init__(self, board_size, num_virus, board_filepath = None, command_filepath = None, **kwawgs):
         self.board_size = board_size
         self.num_virus = num_virus
         self.num_virus_left = num_virus
+
+        util.clear(board_filepath, command_filepath)
         self.board_filepath = board_filepath
         self.command_filepath = command_filepath
+
+        try:
+            self.__wait = kwawgs["wait"]
+        except KeyError:
+            self.__wait = None
 
         self.values = [[0 for i in range(board_size)] for j in range(board_size)]
         self.virus_values = [[' ' for i in range(board_size)] for j in range(board_size)]
@@ -20,6 +34,10 @@ class CovidGame:
         self.instruction()
         self.over = False
         self.iter = 0
+
+        logging.info(f'''Board created with virus position:''')
+        for idx, row in enumerate(self.values):
+            logging.info(f"{idx} {row}")
 
     def creat_board(self):
         
@@ -160,6 +178,8 @@ class CovidGame:
         '''Support 2 type of control: via command line or via input from file.'''
         if self.command_filepath:
             while True: # Wait until the file is updated
+                if self.__wait:
+                    time.sleep(self.__wait)
                 with open(self.command_filepath, 'r') as f:
                     try:
                         iter = int(f.readline())
@@ -282,7 +302,8 @@ def main():
     game = CovidGame(board_size=config.board_size,
                     num_virus=config.num_virus,
                     board_filepath=config.board_path,
-                    command_filepath=config.cmd_path)
+                    command_filepath=config.cmd_path,
+                    wait = config.board_wait)
     game.play()
 
 if __name__ == "__main__":
