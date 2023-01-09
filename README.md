@@ -8,7 +8,7 @@ each safe square is opened, a number indicating the number of viruses surroundin
 Find all viruses in the grid by carefully revealing cells. A revealed cell will indicate the number of adjacent viruses (horizontally, vertically, or diagonally). Cells with no adjacent viruses will be blank and automatically reveal their neighbors. Revealing a virus will cause you to lose the game. You win the game by revealing all non-virus cells.
 ## How to run this game and its solver
 
-Run `main.py` file and the game and its solver will automatically run. Noted that if your machine didn't have [ortools](https://developers.google.com/optimization) and [numpy](https://numpy.org/), they will be installed.
+Run `main.py` file and the game and its solver will automatically run. Keep in mind that if your machine didn't have [ortools](https://developers.google.com/optimization) and [numpy](https://numpy.org/), they will automatically be installed.
 
 ## Configuration
 Head to `config.py` to modify run configuration:
