@@ -1,3 +1,6 @@
+import time
+import logging
+
 from ortools.sat.python import cp_model
 
 
@@ -26,12 +29,22 @@ def clear(*files):
             file.write("")
 
 class CSPSolution(cp_model.CpSolverSolutionCallback):
-    def __init__(self,variables):
+    def __init__(self,variables, time_limit = None):
+        self.__logger = logging.getLogger(name="solver")
+        self.__time_limit = time_limit
+        self.__start_time = time.time()
         cp_model.CpSolverSolutionCallback.__init__(self)
         self.__variables = variables
         self.solution_list = [] # Solution List
+        self.timeout = False
 
     def on_solution_callback(self):
+        if self.__time_limit:
+            if time.time() - self.__start_time > self.__time_limit:
+                if self.__logger:
+                    self.__logger.warning(f"Time limit exceeded. Got {len(self.solution_list)} solutions so far.")
+                self.timeout = True
+                self.StopSearch()
         sol = [self.Value(v) for v in self.__variables]
         if sol not in self.solution_list:
             self.solution_list.append(sol)
